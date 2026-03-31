@@ -43,7 +43,7 @@ DevicePilot is a professional, feature-rich system monitoring overlay for Window
 
 1. **Download or Clone** the repository:
    ```bash
-   git clone https://github.com/yourusername/devicepilot.git
+   git clone https://github.com/Marvin-Codex/devicepilot.git
    cd devicepilot
    ```
 
@@ -364,3 +364,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **DevicePilot** - *Professional System Monitoring, Perfected.*
 
 Made with ❤️ for the Windows community
+
+© 2026 Sserunjoji Marvin
