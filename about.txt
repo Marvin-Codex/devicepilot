@@ -1,0 +1,307 @@
+1 — High-level feature summary (DevicePilot)
+
+Dockable, transparent desktop overlay (always-on-top) for live stats.
+
+Overlay shows: FPS (optional/integration), CPU %, RAM %, GPU % & temp (where available), Battery % & performance, Battery full-report (capacity).
+
+Overlay enters Display-Over Mode when specific apps/game processes are running (configurable whitelist).
+
+Dockable / draggable; can be click-through (so it doesn’t block mouse) and toggleable.
+
+Settings: theme (transparent, blur), update interval, start-on-boot, per-app profiles.
+
+Export / view full Windows battery-report with parsed fields (design capacity, full charge capacity, cycle count, recent usage).
+
+2 — Feasibility & important notes
+
+CPU / RAM / battery: straightforward with psutil and powercfg.
+
+GPU metrics: use vendor APIs:
+
+NVIDIA → py3nvml (NVML)
+
+AMD → AMD ADL (more effort) or rely on OpenHardwareMonitor (OHM) / LibreHardwareMonitor (LHM) as a bridge.
+
+FPS reading: the accurate way requires hooking into the graphics pipeline (DX hook) or reading data from 3rd-party frame-rate servers (RTSS/MSI Afterburner shared memory). Implementing an in-process DirectX hook is advanced and may be fragile / require native code / admin / anti-cheat concerns. I recommend:
+
+Phase 1: show GPU utilization and an estimated FPS from RTSS (if user has Afterburner/RTSS installed) or fallback to per-process frame-time sampling for OpenGL/DirectX apps (limited).
+
+Phase 2 (optional): add a native hook/driver or use Windows Performance APIs and DXGI for robust FPS (needs C++/DLL).
+
+Overlay for fullscreen games: fullscreen-exclusive DirectX games can block normal windows; for full compatibility you may need a DirectX overlay (native). However many games run in borderless/windowed fullscreen where a layered transparent window works fine.
+
+Admin: some features (driver resets, deep GPU queries) may need admin rights.
+
+3 — Suggested tech stack
+
+Frontend / UI: Python 3.11+ + PyQt6
+
+System metrics: psutil, py3nvml (NVIDIA), optionally pywin32 for Windows calls
+
+Battery report parsing: subprocess → powercfg /batteryreport then parse the generated HTML / read the XML if produced.
+
+Optional hardware bridge: LibreHardwareMonitor or OpenHardwareMonitor (run as a small .NET server and read JSON) — easiest cross-vendor GPU support.
+
+Packaging: PyInstaller + installer (optional MSIX/electron-installer)
+
+4 — App architecture (modules)
+devicepilot/
+├─ main.py                 # app entry (Qt App)
+├─ ui/
+│  └─ overlay_window.py    # Overlay window + docking logic
+├─ core/
+│  ├─ metrics.py           # psutil / nvml / OHM wrappers
+│  ├─ fps.py               # FPS integrations (RTSS / estimator)
+│  ├─ battery.py           # battery-report generation & parsing
+│  └─ profiles.py          # per-app profiles, whitelist
+├─ settings/
+│  └─ config.json
+├─ assets/
+└─ installer/
+
+5 — UI/UX behavior
+
+Overlay: small translucent card, rounded corners, minimal icons, dockable left/right/top/bottom.
+
+Display Modes:
+
+Idle: small docked mini-display (CPU / RAM / Battery).
+
+Game active: expand to full overlay with FPS, GPU, temps, battery performance.
+
+Click-through behavior: togglable on/off. When click-through is ON, overlay ignores mouse events. When OFF, user can drag/dock.
+
+6 — Key code snippets
+6.1 — Transparent, dockable PyQt6 overlay (frameless, transparent, draggable, click-through toggle)
+
+Save as overlay_window.py (this is runnable — requires PyQt6).
+
+# overlay_window.py
+import sys
+from PyQt6 import QtWidgets, QtCore, QtGui
+import ctypes
+from ctypes import wintypes
+
+# Windows constants for click-through
+GWL_EXSTYLE = -20
+WS_EX_LAYERED = 0x80000
+WS_EX_TRANSPARENT = 0x20
+
+def make_click_through(hwnd):
+    old = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+    ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old | WS_EX_LAYERED | WS_EX_TRANSPARENT)
+
+def remove_click_through(hwnd):
+    old = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+    new = old & ~WS_EX_TRANSPARENT
+    ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new)
+
+class Overlay(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlags(
+            QtCore.Qt.WindowType.FramelessWindowHint
+            | QtCore.Qt.WindowType.WindowStaysOnTopHint
+            | QtCore.Qt.WindowType.Tool
+        )
+        # transparent background
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(300, 80)
+
+        # UI
+        layout = QtWidgets.QHBoxLayout()
+        self.lbl = QtWidgets.QLabel("CPU: --%  RAM: --%  GPU: --%  BAT: --%")
+        self.lbl.setStyleSheet("color: white; font-weight: 600;")
+        layout.addWidget(self.lbl)
+        self.setLayout(layout)
+
+        # draggable support
+        self._drag_pos = None
+
+        # default non-click-through
+        self._click_through = False
+
+        # set small drop shadow
+        effect = QtWidgets.QGraphicsDropShadowEffect(self)
+        effect.setBlurRadius(12)
+        effect.setColor(QtGui.QColor(0, 0, 0, 160))
+        effect.setOffset(0, 3)
+        self.setGraphicsEffect(effect)
+
+    def toggle_click_through(self):
+        hwnd = int(self.winId())
+        if not self._click_through:
+            make_click_through(hwnd)
+            self._click_through = True
+        else:
+            remove_click_through(hwnd)
+            self._click_through = False
+
+    def mousePressEvent(self, ev):
+        self._drag_pos = ev.globalPosition().toPoint() - self.frameGeometry().topLeft()
+
+    def mouseMoveEvent(self, ev):
+        if ev.buttons() & QtCore.Qt.MouseButton.LeftButton and self._drag_pos:
+            self.move(ev.globalPosition().toPoint() - self._drag_pos)
+
+    def update_text(self, txt):
+        self.lbl.setText(txt)
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    overlay = Overlay()
+    overlay.move(50, 50)
+    overlay.show()
+    sys.exit(app.exec())
+
+
+Notes:
+
+Uses Windows SetWindowLongW to mark window as click-through.
+
+WA_TranslucentBackground enables transparency for modern design.
+
+For blur/transparent blur behind window, additional Win32 DWM calls are required (optional).
+
+6.2 — Collect CPU / RAM / Battery % (psutil)
+
+Install psutil (pip install psutil).
+
+# metrics.py
+import psutil
+
+def get_system_metrics():
+    cpu = psutil.cpu_percent(interval=0.5)
+    ram = psutil.virtual_memory().percent
+    batt = psutil.sensors_battery()
+    battery_percent = batt.percent if batt else None
+    plugged = batt.power_plugged if batt else None
+    return dict(cpu=cpu, ram=ram, battery_percent=battery_percent, plugged=plugged)
+
+6.3 — Parse Windows battery report (powercfg)
+
+This generates a battery report HTML and reads key fields. Requires Windows.
+
+# battery.py
+import subprocess
+import os
+import re
+from pathlib import Path
+
+def generate_battery_report(out_path=None):
+    if out_path is None:
+        out_path = Path.cwd() / "battery-report.html"
+    cmd = ["powercfg", "/batteryreport", "/output", str(out_path)]
+    subprocess.run(cmd, check=True)
+    return out_path
+
+def parse_battery_report_html(path):
+    text = Path(path).read_text(encoding="utf-8", errors="ignore")
+    # extract Design Capacity and Full Charge Capacity using regex
+    def find_field(field_name):
+        m = re.search(rf"{field_name}.*?>([\d,]+)\s*mWh", text, re.IGNORECASE | re.DOTALL)
+        return m.group(1).replace(",", "") if m else None
+
+    design = find_field("Design Capacity")
+    full = find_field("Full Charge Capacity")
+    cycle = None
+    m = re.search(r"Cycle Count.*?>(\d+)<", text, re.IGNORECASE | re.DOTALL)
+    if m:
+        cycle = m.group(1)
+    return {"design_mwh": design, "full_mwh": full, "cycle_count": cycle}
+
+# Example usage:
+# p = generate_battery_report()
+# print(parse_battery_report_html(p))
+
+
+Notes:
+
+powercfg /batteryreport produces a snapshot with historical data, design capacity, full charge capacity — useful for battery health.
+
+6.4 — GPU (NVIDIA) quick sample using py3nvml
+
+Install pip install py3nvml.
+
+# gpu_nvml.py
+from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, nvmlDeviceGetUtilizationRates
+
+def get_nvidia_gpu_stats():
+    nvmlInit()
+    n = nvmlDeviceGetCount()
+    stats = []
+    for i in range(n):
+        handle = nvmlDeviceGetHandleByIndex(i)
+        util = nvmlDeviceGetUtilizationRates(handle)
+        stats.append({"gpu": i, "util": util.gpu, "mem": util.memory})
+    return stats
+
+6.5 — Simple polling loop to update the overlay
+# main.py (snippet)
+import sys, time, threading
+from PyQt6 import QtWidgets, QtCore
+from overlay_window import Overlay
+import metrics
+
+class AppController:
+    def __init__(self, overlay):
+        self.overlay = overlay
+        self.running = True
+        self.interval = 1.0
+        t = threading.Thread(target=self.poll_loop, daemon=True)
+        t.start()
+
+    def poll_loop(self):
+        while self.running:
+            m = metrics.get_system_metrics()
+            txt = f"CPU: {m['cpu']:.0f}%  RAM: {m['ram']:.0f}%  BAT: {m['battery_percent'] or '--'}%"
+            QtCore.QMetaObject.invokeMethod(self.overlay, "update_text", QtCore.Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG(str, txt))
+            time.sleep(self.interval)
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    ov = Overlay()
+    ov.show()
+    ctrl = AppController(ov)
+    sys.exit(app.exec())
+
+
+This shows how to poll metrics in a background thread and update the Qt overlay thread-safely.
+
+7 — FPS integration approaches (recommended order)
+
+RTSS (MSI Afterburner): Many users already use RTSS; RTSS exposes shared memory with FPS and frametime — easiest to support by reading that memory (no driver hook).
+
+DXGI / DirectX hooking: Native DLL + hooking — robust but complex and risky (anti-cheat).
+
+Estimated FPS: sample GPU busy time / frame times — rough and unreliable.
+
+8 — Battery full-report UI
+
+Provide a Battery Health page that runs powercfg /batteryreport and displays:
+
+Design capacity (mWh)
+
+Full charge capacity (mWh)
+
+Recent usage chart (from the report)
+
+Cycle count (if reported)
+
+Recommendations (e.g., capacity < 70% → suggest battery replacement)
+
+You can open the generated HTML in-app (QtWebEngine) or parse and present the relevant fields in native UI.
+
+9 — Packaging & distribution notes
+
+Because of low-level APIs and possible admin needs, create two bundles:
+
+Portable EXE (no admin required) for basic features.
+
+Admin EXE / Installer for advanced features (driver operations, deep GPU queries).
+
+Use PyInstaller options:
+
+--onefile --windowed --icon=devicepilot.ico
+
+Create a proper main.spec if adding uac_admin=True for requiring admin.

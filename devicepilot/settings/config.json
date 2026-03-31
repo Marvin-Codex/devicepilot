@@ -1,0 +1,71 @@
+{
+  "overlay": {
+    "visible": true,
+    "position": {
+      "x": 50,
+      "y": 50
+    },
+    "dock_side": "top-left",
+    "size": {
+      "width": 400,
+      "height": 120
+    },
+    "opacity": 0.92,
+    "click_through": false,
+    "always_on_top": true
+  },
+  "theme": {
+    "style": "modern_dark",
+    "background_color": "#1e1e1e",
+    "text_color": "#ffffff",
+    "accent_color": "#007acc",
+    "border_radius": 10,
+    "shadow_enabled": true,
+    "blur_enabled": false,
+    "gradient_enabled": true
+  },
+  "metrics": {
+    "update_interval": 2.0,
+    "show_fps": true,
+    "show_cpu": true,
+    "show_ram": true,
+    "show_gpu": true,
+    "show_temperature": true,
+    "show_battery": true,
+    "cpu_cores_individual": false,
+    "temperature_unit": "C"
+  },
+  "profiles": {
+    "gaming_mode_enabled": true,
+    "gaming_processes": [
+      "*.exe",
+      "steam.exe",
+      "origin.exe",
+      "uplay.exe",
+      "epicgameslauncher.exe",
+      "battle.net.exe",
+      "gog galaxy.exe",
+      "riotclientservices.exe",
+      "minecraft.exe",
+      "javaw.exe",
+      "*.exe",
+      "steam.exe",
+      "origin.exe",
+      "uplay.exe",
+      "epicgameslauncher.exe",
+      "battle.net.exe"
+    ],
+    "per_app_settings": {}
+  },
+  "startup": {
+    "start_with_windows": false,
+    "start_minimized": true,
+    "auto_hide_on_fullscreen": true
+  },
+  "advanced": {
+    "require_admin": false,
+    "gpu_vendor_preference": "auto",
+    "fps_source": "auto",
+    "logging_enabled": false
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "initialization": {
+    "nvidia_available": false,
+    "wmi_available": true,
+    "ohm_available": true,
+    "powershell_available": true
+  },
+  "methods_testing": {
+    "powershell": {
+      "success": false,
+      "gpu_count": 0,
+      "data": []
+    },
+    "ohm": {
+      "success": true,
+      "gpu_count": 2,
+      "data": [
+        {
+          "vendor": "AMD",
+          "name": "AMD Radeon HD 8500M",
+          "memory_total": 0,
+          "memory_total_mb": 0,
+          "utilization_gpu": 0,
+          "utilization_memory": 0,
+          "temperature": 0,
+          "power_watts": 0,
+          "clock_graphics_mhz": 0,
+          "clock_memory_mhz": 0,
+          "fan_speed_rpm": 0,
+          "is_active": false,
+          "is_discrete": true
+        },
+        {
+          "vendor": "AMD",
+          "name": "AMD Radeon R4 Graphics",
+          "memory_total": 0,
+          "memory_total_mb": 0,
+          "utilization_gpu": 3,
+          "utilization_memory": 0,
+          "temperature": 59,
+          "power_watts": 0,
+          "clock_graphics_mhz": 800,
+          "clock_memory_mhz": 0,
+          "fan_speed_rpm": 0,
+          "is_active": true,
+          "is_discrete": false
+        }
+      ]
+    },
+    "nvidia": {
+      "success": false,
+      "error": "Not initialized"
+    }
+  },
+  "gaming_scenario": {
+    "baseline": [
+      {
+        "vendor": "AMD",
+        "name": "AMD Radeon R4 Graphics",
+        "memory_total": 0,
+        "memory_total_mb": 0,
+        "utilization_gpu": 24,
+        "utilization_memory": 0,
+        "temperature": 57,
+        "power_watts": 0,
+        "clock_graphics_mhz": 800,
+        "clock_memory_mhz": 0,
+        "fan_speed_rpm": 0,
+        "is_active": true,
+        "is_discrete": false
+      }
+    ],
+    "during_load": [
+      {
+        "vendor": "AMD",
+        "name": "AMD Radeon R4 Graphics",
+        "memory_total": 0,
+        "memory_total_mb": 0,
+        "utilization_gpu": 51,
+        "utilization_memory": 0,
+        "temperature": 58,
+        "power_watts": 0,
+        "clock_graphics_mhz": 800,
+        "clock_memory_mhz": 0,
+        "fan_speed_rpm": 0,
+        "is_active": true,
+        "is_discrete": false
+      },
+      {
+        "vendor": "AMD",
+        "name": "AMD Radeon R4 Graphics",
+        "memory_total": 0,
+        "memory_total_mb": 0,
+        "utilization_gpu": 93,
+        "utilization_memory": 0,
+        "temperature": 60,
+        "power_watts": 0,
+        "clock_graphics_mhz": 800,
+        "clock_memory_mhz": 0,
+        "fan_speed_rpm": 0,
+        "is_active": true,
+        "is_discrete": false
+      },
+      {
+        "vendor": "AMD",
+        "name": "AMD Radeon R4 Graphics",
+        "memory_total": 0,
+        "memory_total_mb": 0,
+        "utilization_gpu": 1,
+        "utilization_memory": 0,
+        "temperature": 58,
+        "power_watts": 0,
+        "clock_graphics_mhz": 800,
+        "clock_memory_mhz": 0,
+        "fan_speed_rpm": 0,
+        "is_active": true,
+        "is_discrete": false
+      },
+      {
+        "vendor": "AMD",
+        "name": "AMD Radeon R4 Graphics",
+        "memory_total": 0,
+        "memory_total_mb": 0,
+        "utilization_gpu": 0,
+        "utilization_memory": 0,
+        "temperature": 58,
+        "power_watts": 0,
+        "clock_graphics_mhz": 800,
+        "clock_memory_mhz": 0,
+        "fan_speed_rpm": 0,
+        "is_active": true,
+        "is_discrete": false
+      },
+      {
+        "vendor": "AMD",
+        "name": "AMD Radeon R4 Graphics",
+        "memory_total": 0,
+        "memory_total_mb": 0,
+        "utilization_gpu": 47,
+        "utilization_memory": 0,
+        "temperature": 58,
+        "power_watts": 0,
+        "clock_graphics_mhz": 800,
+        "clock_memory_mhz": 0,
+        "fan_speed_rpm": 0,
+        "is_active": true,
+        "is_discrete": false
+      }
+    ],
+    "fps_data": {}
+  },
+  "fps_integration": {
+    "available": true,
+    "test_results": {
+      "status": "FPS monitor ready"
+    }
+  },
+  "validation_summary": {
+    "issues_found": [
+      "PowerShell method found no GPUs",
+      "OHM reports 0\u00b0C temperature (sensor may be unavailable)"
+    ],
+    "recommendations": [],
+    "metrics_summary": {},
+    "performance_impact": {}
+  }
+}
